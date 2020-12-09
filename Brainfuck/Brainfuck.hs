@@ -15,11 +15,11 @@ import qualified Data.Vector as V
 import qualified Data.ByteString as BS
 import System.Environment (getArgs, getProgName)
 import System.Directory (doesFileExist)
-import Control.Monad.State.Strict (evalState, modify, get, MonadState, State)
+import Control.Monad.State.Lazy (evalState, modify, get, MonadState, State)
 import Data.Maybe (fromMaybe)
-import Control.Monad.Writer.Strict (execWriterT, tell, WriterT, MonadWriter)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import Control.Monad.Writer.Lazy (execWriterT, tell, WriterT, MonadWriter)
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as TIO
 
 data Instruction = PointerIncrement
                  | PointerDecrement
