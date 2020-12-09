@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Brainfuck where
+module Main where
 
 import Control.Lens
     ( (^?), (^.), over, set, makeLenses, At(at), Ixed(ix) )
