@@ -34,12 +34,12 @@ data Status = Run | Halt
 type Program = V.Vector Instruction
 type Memory  = M.Map Int Char
 
-data VMState = VMState { _pc       :: Int
-                       , _pointer  :: Int
-                       , _loopLoc  :: Maybe Int
-                       , _memory   :: Memory
-                       , _program  :: Program
-                       , _status   :: Status }
+data VMState = VMState { _pc        :: Int
+                       , _pointer   :: Int
+                       , _loopStack :: [Int]
+                       , _memory    :: Memory
+                       , _program   :: Program
+                       , _status    :: Status }
              deriving (Show)
 
 $(makeLenses ''VMState)
@@ -70,12 +70,12 @@ assembly = do
 -- Pure functions
 
 initVMState :: Program -> VMState
-initVMState prog = VMState { _pc      = 0
-                           , _pointer = 0
-                           , _loopLoc = Nothing
-                           , _memory  = M.empty
-                           , _program = prog
-                           , _status  = Run }
+initVMState prog = VMState { _pc        = 0
+                           , _pointer   = 0
+                           , _loopStack = []
+                           , _memory    = M.empty
+                           , _program   = prog
+                           , _status    = Run }
 
 elemIndexFrom :: (Eq a) => Int -> a -> V.Vector a -> Maybe Int
 elemIndexFrom from needle vector = (+ from) <$> (V.elemIndex needle . V.drop from) vector
@@ -124,7 +124,9 @@ vmStartLoop = do
     case endLoop' of
       Just endLoop -> modify $ set pc endLoop
       Nothing      -> error ("No end loop found (pc=" ++ show (state^.pc) ++ ")")
-  else modify $ set loopLoc (Just (state^.pc))
+  else do
+    let stack' = state^.pc : state^.loopStack
+    modify $ set loopStack stack'
 
 vmEndLoop :: VM ()
 vmEndLoop = do
@@ -133,10 +135,13 @@ vmEndLoop = do
   let char = getMem state
 
   if char /= '\0' then do
-    case state^.loopLoc of
-      Just startLoop -> modify $ set pc startLoop
-      Nothing        -> error ("Start loop was not set (pc=" ++ show (state^.pc) ++ ")")
-  else modify $ set loopLoc Nothing
+    case state^.loopStack of
+      (pc':_) -> modify $ set pc pc'
+      []      -> error ("Loop stack is empty (pc=" ++ show (state^.pc) ++ ")")
+  else do
+    case state^.loopStack of
+      (_:rest) -> modify $ set loopStack rest
+      []       -> return ()
 
 vmOutput :: VM ()
 vmOutput = do
@@ -148,7 +153,6 @@ vmInput :: VM ()
 vmInput = do
   chr <- liftIO getChar
   modify $ putMem chr
-
 
 vmExecute :: VM ()
 vmExecute = do
