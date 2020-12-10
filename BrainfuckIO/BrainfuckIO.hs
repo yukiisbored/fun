@@ -93,16 +93,15 @@ vmHalt :: VM ()
 vmHalt = modify (set status Halt)
 
 vmPointerInc :: VM ()
-vmPointerInc = modify (over pc succ . over pointer succ)
+vmPointerInc = modify $ over pointer succ
 
 vmPointerDec :: VM ()
-vmPointerDec = modify (over pc succ . over pointer pred)
+vmPointerDec = modify $ over pointer pred
 
 vmArithmetic :: (Char -> Char) -> VM ()
 vmArithmetic p = do
   state <- get
   modify $ putMem (p (getMem state))
-  modify $ over pc succ
 
 vmIncrement :: VM ()
 vmIncrement = vmArithmetic succ'
@@ -123,9 +122,9 @@ vmStartLoop = do
 
   if char == '\0' then do
     case endLoop' of
-      Just endLoop -> modify $ set pc (succ endLoop)
+      Just endLoop -> modify $ set pc endLoop
       Nothing      -> error ("No end loop found (pc=" ++ show (state^.pc) ++ ")")
-  else modify $ over pc succ . set loopLoc (Just (state^.pc))
+  else modify $ set loopLoc (Just (state^.pc))
 
 vmEndLoop :: VM ()
 vmEndLoop = do
@@ -135,22 +134,20 @@ vmEndLoop = do
 
   if char /= '\0' then do
     case state^.loopLoc of
-      Just startLoop -> modify $ set pc (succ startLoop)
+      Just startLoop -> modify $ set pc startLoop
       Nothing        -> error ("Start loop was not set (pc=" ++ show (state^.pc) ++ ")")
-  else modify $ over pc succ . set loopLoc Nothing
+  else modify $ set loopLoc Nothing
 
 vmOutput :: VM ()
 vmOutput = do
   state <- get
   let char = getMem state
   liftIO $ putChar char
-  modify $ over pc succ
 
 vmInput :: VM ()
 vmInput = do
   chr <- liftIO getChar
   modify $ putMem chr
-  modify $ over pc succ
 
 
 vmExecute :: VM ()
@@ -169,6 +166,8 @@ vmExecute = do
     Just StartLoop        -> vmStartLoop
     Just EndLoop          -> vmEndLoop
     Nothing               -> vmHalt
+
+  modify $ over pc succ
 
   state <- get
 
